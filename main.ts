@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
-import { pinyin } from "https://deno.land/x/pinyin_pro@v3.14.0/mod.ts";
+import { pinyin } from "https://deno.land/x/pinyin@v0.0.5/mod.ts"
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "POST" && req.url.endsWith("/convert")) {
