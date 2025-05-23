@@ -43,29 +43,28 @@ const SPECIAL_CASES: Record<string, string> = {
   "阿房": "AP"
 };
 
+// 翘舌音映射表
+const RETROFLEX_MAP: Record<string, string> = {
+  "zh": "z",
+  "ch": "c",
+  "sh": "s"
+};
+
 const handler = async (req: Request): Promise<Response> => {
   const url = new URL(req.url);
   
   if (req.method === "GET" && url.pathname === "/convert") {
     try {
-      // 安全获取参数
-      const rawText = url.searchParams.get("text") || "";
-      let text: string;
-      try {
-        text = decodeURIComponent(rawText);
-      } catch {
-        throw new Error("参数需要URL编码");
-      }
+      const text = decodeURIComponent(url.searchParams.get("text") || "");
+      if (!text) throw new Error("请输入内容");
       
-      if (!/^[\p{Script=Han}]+$/u.test(text)) {
-        throw new Error("仅支持中文文本");
-      }
-
-      // 安全生成缩写
       let abbr = "";
       let pos = 0;
+      
       while (pos < text.length) {
         let matched = false;
+        
+        // 优先匹配特例词
         for (let len = Math.min(4, text.length - pos); len >= 1; len--) {
           const word = text.slice(pos, pos + len);
           if (SPECIAL_CASES[word]) {
@@ -75,15 +74,27 @@ const handler = async (req: Request): Promise<Response> => {
             break;
           }
         }
+        
         if (!matched) {
-          const [initial] = pinyin(text[pos], { 
+          // 获取拼音首字母并处理翘舌音
+          const [pinyinResult] = pinyin(text[pos], { 
             style: pinyin.STYLE_INITIALS 
           });
-          abbr += initial[0].toUpperCase();
+          
+          let initial = pinyinResult[0].toLowerCase();
+          
+          // 应用翘舌音转换规则
+          for (const [from, to] of Object.entries(RETROFLEX_MAP)) {
+            if (initial.startsWith(from)) {
+              initial = to + initial.slice(from.length);
+              break;
+            }
+          }
+          
+          abbr += initial.toUpperCase();
           pos++;
         }
       }
-
       // 安全返回响应
       return new Response(`${abbr}|${text}`, {
         headers: new Headers({
