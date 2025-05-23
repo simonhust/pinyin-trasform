@@ -1,26 +1,95 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import pinyin from "https://deno.land/x/pinyin/mod.ts";
 
+// 特例词库配置
+const SPECIAL_CASES: Record<string, string> = {
+  
+  // 地名（含多音字）
+  "重庆": "CQ",
+  "厦门": "XM",
+  "朝阳": "CY",
+  "长安": "CA",
+  "长沙": "CS",
+  "西藏": "XZ",
+  "乐山": "LS",
+  "青岛": "QD",
+  "宁波": "NB",
+  "长春": "CC",
+  "保定": "BD",
+  "贵阳": "GY",
+  "六安": "LA",
+  "台州": "TZ",
+  "黄山": "HS",
+
+  // 专有名词（含多音字）
+  "重案": "ZA",
+  "重量": "ZL",
+  "重复": "CF",
+  "行程": "XC",
+  "长发": "CF",
+  "调和": "TH",
+  "大夫": "DF",
+  "地道": "DD",
+  "本事": "BS"
+
+  "哪吒": "NZ",    // "哪"读 né（非 nǎ/na）
+  "单于": "CY",    // "单"读 chán（非 dān/shàn）
+  "可汗": "KH",    // "可"读 kè（非 kě）
+  "吐蕃": "TB",    // "蕃"读 bō（非 fān）
+  "龟兹": "QC",    // 读 qiū cí（非 guī zī）
+  "大宛": "DW",    // "宛"读 yuān（非 wǎn）
+  "月氏": "YZ",    // "氏"读 zhī（非 shì）
+  "镐京": "HJ",    // "镐"读 hào（非 gǎo）
+  "会稽": "KJ",    // "会"读 kuài（非 huì）
+  "阿房": "AP"   // "房"读 páng（非 fáng）
+};
+
 const handler = async (req: Request): Promise<Response> => {
   const url = new URL(req.url);
   
   if (req.method === "GET" && url.pathname === "/convert") {
     try {
+      // 参数解码与验证
       const text = decodeURIComponent(url.searchParams.get("text") || "");
-      if (!text) throw new Error("需要提供text参数");
+      if (!text) throw new Error("请输入要转换的文本");
+      if (!/^[\p{Script=Han}]+$/u.test(text)) {
+        throw new Error("仅支持纯中文字符输入");
+      }
 
-      // 精确分词转换
-      const abbr = pinyin(text, {
-        style: pinyin.STYLE_TONE,       // 先获取完整拼音
-        segment: true,                // 强制启用分词
-        heteronym: false
-      })
-      .flat()
-      .map(p => p.charAt(0).toUpperCase())  // 手动取首字母
-      .join('');
+      // 核心转换逻辑
+      let abbr = "";
+      let pos = 0;
+      
+      while (pos < text.length) {
+        let matched = false;
+        
+        // 贪婪匹配最长特例词 (4字 -> 1字)
+        for (let len = Math.min(4, text.length - pos); len >= 1; len--) {
+          const word = text.slice(pos, pos + len);
+          if (SPECIAL_CASES[word]) {
+            abbr += SPECIAL_CASES[word];
+            pos += len;
+            matched = true;
+            break;
+          }
+        }
+        
+        // 未匹配时处理单字
+        if (!matched) {
+          const [initial] = pinyin(text[pos], {
+            style: pinyin.STYLE_INITIALS,
+            heteronym: false
+          });
+          abbr += initial[0].toUpperCase();
+          pos++;
+        }
+      }
 
       return new Response(`${abbr}|${text}`, {
-        headers: { "Content-Type": "text/plain; charset=utf-8" }
+        headers: { 
+          "Content-Type": "text/plain; charset=utf-8",
+          "X-Tecent-Debug": Object.keys(SPECIAL_CASES).join(",") // 调试信息
+        }
       });
 
     } catch (error) {
@@ -34,4 +103,5 @@ const handler = async (req: Request): Promise<Response> => {
   return new Response("接口不存在", { status: 404 });
 };
 
+// 启动服务
 serve(handler, { port: 8000 });
