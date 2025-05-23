@@ -32,16 +32,16 @@ const SPECIAL_CASES: Record<string, string> = {
   "地道": "DD",
   "本事": "BS"
 
-  "哪吒": "NZ",    // "哪"读 né（非 nǎ/na）
-  "单于": "CY",    // "单"读 chán（非 dān/shàn）
-  "可汗": "KH",    // "可"读 kè（非 kě）
-  "吐蕃": "TB",    // "蕃"读 bō（非 fān）
-  "龟兹": "QC",    // 读 qiū cí（非 guī zī）
-  "大宛": "DW",    // "宛"读 yuān（非 wǎn）
-  "月氏": "YZ",    // "氏"读 zhī（非 shì）
-  "镐京": "HJ",    // "镐"读 hào（非 gǎo）
-  "会稽": "KJ",    // "会"读 kuài（非 huì）
-  "阿房": "AP"   // "房"读 páng（非 fáng）
+  "哪吒": "NZ",
+  "单于": "CY",
+  "可汗": "KH",
+  "吐蕃": "TB",
+  "龟兹": "QC",
+  "大宛": "DW",
+  "月氏": "YZ",
+  "镐京": "HJ",
+  "会稽": "KJ",
+  "阿房": "AP"
 };
 
 const handler = async (req: Request): Promise<Response> => {
