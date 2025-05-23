@@ -1,9 +1,9 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import pinyin from "https://deno.land/x/pinyin/mod.ts";
 
-// 安全特例词库
+// 增强版特例词库
 const SPECIAL_CASES: Record<string, string> = {
- // 地名（含多音字）
+  // 地名（含多音字）
   "重庆": "CQ",
   "厦门": "XM",
   "朝阳": "CY",
@@ -43,11 +43,10 @@ const SPECIAL_CASES: Record<string, string> = {
   "阿房": "AP"
 };
 
-// 翘舌音映射表
-const RETROFLEX_MAP: Record<string, string> = {
-  "zh": "z",
-  "ch": "c",
-  "sh": "s"
+// 零声母映射表
+const ZERO_INITIALS: Record<string, string> = {
+  "a": "A", "o": "O", "e": "E",
+  "ai": "A", "ei": "E", "ou": "O"
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -56,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
   if (req.method === "GET" && url.pathname === "/convert") {
     try {
       const text = decodeURIComponent(url.searchParams.get("text") || "");
-      if (!text) throw new Error("请输入内容");
+      if (!text) throw new Error("输入内容不能为空");
       
       let abbr = "";
       let pos = 0;
@@ -64,7 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
       while (pos < text.length) {
         let matched = false;
         
-        // 优先匹配特例词
+        // 优先匹配最长特例词（4字→1字）
         for (let len = Math.min(4, text.length - pos); len >= 1; len--) {
           const word = text.slice(pos, pos + len);
           if (SPECIAL_CASES[word]) {
@@ -76,37 +75,32 @@ const handler = async (req: Request): Promise<Response> => {
         }
         
         if (!matched) {
-          // 获取拼音首字母并处理翘舌音
-          const [pinyinResult] = pinyin(text[pos], { 
-            style: pinyin.STYLE_INITIALS 
+          const char = text[pos];
+          const [pinyinArr] = pinyin(char, { 
+            style: pinyin.STYLE_TONE, // 获取完整拼音
+            heteronym: true           // 启用多音字模式
           });
           
-          let initial = pinyinResult[0].toLowerCase();
+          // 选择第一个拼音并处理
+          let py = pinyinArr[0].replace(/[^a-z]/g, ''); // 去除声调
           
-          // 应用翘舌音转换规则
-          for (const [from, to] of Object.entries(RETROFLEX_MAP)) {
-            if (initial.startsWith(from)) {
-              initial = to + initial.slice(from.length);
-              break;
-            }
-          }
+          // 零声母处理
+          let initial = ZERO_INITIALS[py] || py.charAt(0);
+          
+          // 翘舌音转换
+          if (py.startsWith('zh')) initial = 'z';
+          if (py.startsWith('ch')) initial = 'c';
+          if (py.startsWith('sh')) initial = 's';
           
           abbr += initial.toUpperCase();
           pos++;
         }
       }
-      // 安全返回响应
-      return new Response(`${abbr}|${text}`, {
-        headers: new Headers({
-          "Content-Type": "text/plain; charset=utf-8"
-        })
-      });
+
+      return new Response(`${abbr}|${text}`);
 
     } catch (error) {
-      return new Response(`错误: ${error.message}`, { 
-        status: 400,
-        headers: { "Content-Type": "text/plain" }
-      });
+      return new Response(`错误: ${error.message}`, { status: 400 });
     }
   }
   return new Response("接口不存在", { status: 404 });
