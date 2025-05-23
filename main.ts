@@ -1,42 +1,62 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import pinyin from "https://deno.land/x/pinyin/mod.ts";
 
-// 核心转换逻辑
-const convertToInitials = (text: string): string => {
-  return [...text].map(char => {
-    // 处理中文字符
-    if (/[\u4e00-\u9fa5]/.test(char)) {
-      const py = pinyin(char, { style: "FIRST_LETTER" })[0];
-      return py ? py[0].toUpperCase() : '';
-    }
-    // 保留字母数字
-    return /[a-zA-Z0-9]/.test(char) ? char.toUpperCase() : '';
-  }).join('');
-};
-
-// API请求处理
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "POST" && new URL(req.url).pathname === "/convert") {
-    try {
-      const { text } = await req.json();
-      if (!text || typeof text !== "string") throw new Error("Invalid input");
-      
-      const initials = convertToInitials(text);
-      const result = `${initials}|${text}`;
-
-      return new Response(JSON.stringify({ result }), {
-        headers: { "Content-Type": "application/json" }
-      });
-
-    } catch (error) {
+  const url = new URL(req.url);
+  
+  // 解析转换参数
+  if (url.pathname === "/convert") {
+    const inputText = decodeURIComponent(url.searchParams.get("text") || url.hash.slice(1));
+    
+    if (!inputText) {
       return new Response(JSON.stringify({ 
-        error: error.message 
+        error: "Missing text parameter",
+        example: "/convert?text=重庆森林 或 /convert#重庆森林"
       }), { status: 400 });
     }
+
+    try {
+      // 生成首字母缩写
+      const abbreviation = pinyin(inputText, { style: "FIRST_LETTER" })
+        .map(word => word[0].toUpperCase())
+        .join("");
+
+      // 构建返回结果
+      const result = {
+        original: inputText,
+        abbreviation,
+        combined: `${abbreviation}|${inputText}`
+      };
+
+      return new Response(JSON.stringify({ result }, null, 2), {
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({
+        error: "Conversion failed",
+        details: error.message
+      }), { status: 500 });
+    }
   }
-  
-  return new Response("Not Found", { status: 404 });
+
+  // 返回使用说明
+  return new Response(`
+    API Usage Examples:
+    1. /convert?text=重庆森林
+    2. /convert#重庆森林
+    
+    Response format: 
+    {
+      "result": {
+        "original": "重庆森林",
+        "abbreviation": "CQSL",
+        "combined": "CQSL|重庆森林"
+      }
+    }
+  `, { headers: { "Content-Type": text/plain" } });
 };
 
-// 启动服务
 serve(handler, { port: 8000 });
