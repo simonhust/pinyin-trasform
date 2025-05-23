@@ -1,10 +1,9 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import pinyin from "https://deno.land/x/pinyin/mod.ts";
 
-// 特例词库配置
+// 安全特例词库
 const SPECIAL_CASES: Record<string, string> = {
-  
-  // 地名（含多音字）
+ // 地名（含多音字）
   "重庆": "CQ",
   "厦门": "XM",
   "朝阳": "CY",
@@ -49,21 +48,24 @@ const handler = async (req: Request): Promise<Response> => {
   
   if (req.method === "GET" && url.pathname === "/convert") {
     try {
-      // 参数解码与验证
-      const text = decodeURIComponent(url.searchParams.get("text") || "");
-      if (!text) throw new Error("请输入要转换的文本");
+      // 安全获取参数
+      const rawText = url.searchParams.get("text") || "";
+      let text: string;
+      try {
+        text = decodeURIComponent(rawText);
+      } catch {
+        throw new Error("参数需要URL编码");
+      }
+      
       if (!/^[\p{Script=Han}]+$/u.test(text)) {
-        throw new Error("仅支持纯中文字符输入");
+        throw new Error("仅支持中文文本");
       }
 
-      // 核心转换逻辑
+      // 安全生成缩写
       let abbr = "";
       let pos = 0;
-      
       while (pos < text.length) {
         let matched = false;
-        
-        // 贪婪匹配最长特例词 (4字 -> 1字)
         for (let len = Math.min(4, text.length - pos); len >= 1; len--) {
           const word = text.slice(pos, pos + len);
           if (SPECIAL_CASES[word]) {
@@ -73,35 +75,30 @@ const handler = async (req: Request): Promise<Response> => {
             break;
           }
         }
-        
-        // 未匹配时处理单字
         if (!matched) {
-          const [initial] = pinyin(text[pos], {
-            style: pinyin.STYLE_INITIALS,
-            heteronym: false
+          const [initial] = pinyin(text[pos], { 
+            style: pinyin.STYLE_INITIALS 
           });
           abbr += initial[0].toUpperCase();
           pos++;
         }
       }
 
+      // 安全返回响应
       return new Response(`${abbr}|${text}`, {
-        headers: { 
-          "Content-Type": "text/plain; charset=utf-8",
-          "X-Tecent-Debug": Object.keys(SPECIAL_CASES).join(",") // 调试信息
-        }
+        headers: new Headers({
+          "Content-Type": "text/plain; charset=utf-8"
+        })
       });
 
     } catch (error) {
       return new Response(`错误: ${error.message}`, { 
         status: 400,
-        headers: { "Content-Type": "text/plain; charset=utf-8" }
+        headers: { "Content-Type": "text/plain" }
       });
     }
   }
-
   return new Response("接口不存在", { status: 404 });
 };
 
-// 启动服务
 serve(handler, { port: 8000 });
