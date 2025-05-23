@@ -30,7 +30,7 @@ const SPECIAL_CASES: Record<string, string> = {
   "调和": "TH",
   "大夫": "DF",
   "地道": "DD",
-  "本事": "BS"
+  "本事": "BS",
 
   "哪吒": "NZ",
   "单于": "CY",
