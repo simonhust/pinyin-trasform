@@ -1,59 +1,50 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
-import pinyin from "https://deno.land/x/pinyin/mod.ts";
+import { pinyin } from "https://deno.land/x/pinyin_pro@v3.14.0/mod.ts";
 
 const handler = async (req: Request): Promise<Response> => {
-  const url = new URL(req.url);
-  
-  if (url.pathname === "/convert") {
-    const inputText = decodeURIComponent(url.searchParams.get("text") || url.hash.slice(1));
-    
-    if (!inputText) {
-      return new Response(JSON.stringify({ 
-        error: "Missing text parameter",
-        example: "/convert?text=重庆森林 或 /convert#重庆森林"
-      }), { status: 400 });
-    }
-
+  if (req.method === "POST" && req.url.endsWith("/convert")) {
     try {
-      const abbreviation = pinyin(inputText, { style: "FIRST_LETTER" })
-        .map(word => word[0].toUpperCase())
-        .join("");
+      const { text, type } = await req.json();
+      
+      let result = text;
+      switch(type) {
+        case "upper":
+          result = text.toUpperCase();
+          break;
+        case "lower":
+          result = text.toLowerCase();
+          break;
+        case "abbreviation":  // 新增首字母缩写处理
+          const abbreviation = pinyin(text, {
+            pattern: 'first',
+            toneType: 'none',
+            type: 'array'
+          }).join('').toUpperCase();
+          result = `${abbreviation}|${text}`;
+          break;
+        default:
+          throw new Error("Invalid conversion type");
+      }
 
-      const result = {
-        original: inputText,
-        abbreviation,
-        combined: `${abbreviation}|${inputText}`
-      };
-
-      return new Response(JSON.stringify({ result }, null, 2), {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
+      return new Response(JSON.stringify({ 
+        status: "success",
+        result
+      }), {
+        headers: { "Content-Type": "application/json" }
       });
+      
     } catch (error) {
       return new Response(JSON.stringify({
-        error: "Conversion failed",
-        details: error.message
-      }), { status: 500 });
+        status: "error",
+        message: error.message
+      }), { 
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
     }
   }
 
-  // 修复点：给text/plain加上引号
-  return new Response(`
-    API Usage Examples:
-    1. /convert?text=重庆森林
-    2. /convert#重庆森林
-    
-    Response format: 
-    {
-      "result": {
-        "original": "重庆森林",
-        "abbreviation": "CQSL",
-        "combined": "CQSL|重庆森林"
-      }
-    }
-  `, { headers: { "Content-Type": "text/plain" } }); // 这里修复了引号
+  return new Response("Not Found", { status: 404 });
 };
 
 serve(handler, { port: 8000 });
