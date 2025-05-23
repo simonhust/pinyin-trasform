@@ -4,7 +4,6 @@ import pinyin from "https://deno.land/x/pinyin/mod.ts";
 const handler = async (req: Request): Promise<Response> => {
   const url = new URL(req.url);
   
-  // 解析转换参数
   if (url.pathname === "/convert") {
     const inputText = decodeURIComponent(url.searchParams.get("text") || url.hash.slice(1));
     
@@ -16,12 +15,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     try {
-      // 生成首字母缩写
       const abbreviation = pinyin(inputText, { style: "FIRST_LETTER" })
         .map(word => word[0].toUpperCase())
         .join("");
 
-      // 构建返回结果
       const result = {
         original: inputText,
         abbreviation,
@@ -42,7 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
   }
 
-  // 返回使用说明
+  // 修复点：给text/plain加上引号
   return new Response(`
     API Usage Examples:
     1. /convert?text=重庆森林
@@ -56,7 +53,7 @@ const handler = async (req: Request): Promise<Response> => {
         "combined": "CQSL|重庆森林"
       }
     }
-  `, { headers: { "Content-Type": text/plain" } });
+  `, { headers: { "Content-Type": "text/plain" } }); // 这里修复了引号
 };
 
 serve(handler, { port: 8000 });
