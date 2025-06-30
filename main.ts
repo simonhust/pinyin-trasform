@@ -49,6 +49,18 @@ const ZERO_INITIALS: Record<string, string> = {
   "ai": "A", "ei": "E", "ou": "O"
 };
 
+// 字母到数字的映射表
+const LETTER_TO_NUMBER: Record<string, string> = {
+  "A": "2", "B": "2", "C": "2",
+  "D": "3", "E": "3", "F": "3",
+  "G": "4", "H": "4", "I": "4",
+  "J": "5", "K": "5", "L": "5",
+  "M": "6", "N": "6", "O": "6",
+  "P": "7", "Q": "7", "R": "7", "S": "7",
+  "T": "8", "U": "8", "V": "8",
+  "W": "9", "X": "9", "Y": "9", "Z": "9"
+};
+
 const handler = async (req: Request): Promise<Response> => {
   const url = new URL(req.url);
   
@@ -97,7 +109,14 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      return new Response(`${abbr}|${text}`);
+      // 将首拼转换为数字
+      let numbers = "";
+      for (let i = 0; i < abbr.length; i++) {
+        const letter = abbr[i];
+        numbers += LETTER_TO_NUMBER[letter];
+      }
+
+      return new Response(`${abbr}|${text}|${numbers}`);
 
     } catch (error) {
       return new Response(`错误: ${error.message}`, { status: 400 });
