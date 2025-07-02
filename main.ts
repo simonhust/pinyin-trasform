@@ -61,6 +61,13 @@ const LETTER_TO_NUMBER: Record<string, string> = {
   "W": "9", "X": "9", "Y": "9", "Z": "9"
 };
 
+// 数字到九键键盘的映射表
+const NUMBER_TO_KEYPAD: Record<string, string> = {
+  "0": "0", "1": "1", "2": "2", "3": "3", 
+  "4": "4", "5": "5", "6": "6", "7": "7", 
+  "8": "8", "9": "9"
+};
+
 const handler = async (req: Request): Promise<Response> => {
   const url = new URL(req.url);
   
@@ -88,6 +95,14 @@ const handler = async (req: Request): Promise<Response> => {
         
         if (!matched) {
           const char = text[pos];
+          
+          // 检查是否为数字
+          if (/^\d$/.test(char)) {
+            abbr += char;
+            pos++;
+            continue;
+          }
+          
           const [pinyinArr] = pinyin(char, { 
             style: pinyin.STYLE_TONE, // 获取完整拼音
             heteronym: true           // 启用多音字模式
@@ -109,11 +124,19 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      // 将首拼转换为数字
+      // 将首拼转换为数字，同时处理字母和数字
       let numbers = "";
       for (let i = 0; i < abbr.length; i++) {
-        const letter = abbr[i];
-        numbers += LETTER_TO_NUMBER[letter];
+        const char = abbr[i];
+        // 如果是字母，使用字母映射表
+        if (/[A-Z]/.test(char)) {
+          numbers += LETTER_TO_NUMBER[char];
+        } 
+        // 如果是数字，直接使用数字本身
+        else if (/^\d$/.test(char)) {
+          numbers += NUMBER_TO_KEYPAD[char];
+        }
+        // 其他字符忽略（保持原逻辑）
       }
 
       return new Response(`${abbr}|${text}|${numbers}`);
