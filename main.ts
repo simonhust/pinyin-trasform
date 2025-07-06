@@ -8,6 +8,7 @@ const SPECIAL_CASES: Record<string, string> = {
   "厦门": "XM",
   "朝阳": "CY",
   "长安": "CA",
+  "阿凡达": "AFD",
   "长沙": "CS",
   "西藏": "XZ",
   "乐山": "LS",
