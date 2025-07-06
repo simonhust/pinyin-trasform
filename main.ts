@@ -12,6 +12,7 @@ const SPECIAL_CASES: Record<string, string> = {
   "西藏": "XZ",
   "乐山": "LS",
   "青岛": "QD",
+  "阿凡达": "AFD",
   "宁波": "NB",
   "长春": "CC",
   "保定": "BD",
