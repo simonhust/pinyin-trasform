@@ -114,13 +114,13 @@ const handler = async (req: Request): Promise<Response> => {
           // 零声母处理
           let initial = ZERO_INITIALS[py] || py.charAt(0);
           
-          // 确保首字母转换为大写
-          initial = initial.toUpperCase();
-          
-          // 翘舌音转换
+          // 翘舌音转换，使用大写字母
           if (py.startsWith('zh')) initial = 'Z';
           if (py.startsWith('ch')) initial = 'C';
           if (py.startsWith('sh')) initial = 'S';
+          
+          // 确保首字母为大写
+          initial = initial.toUpperCase();
           
           abbr += initial;
           pos++;
