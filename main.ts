@@ -8,7 +8,6 @@ const SPECIAL_CASES: Record<string, string> = {
   "厦门": "XM",
   "朝阳": "CY",
   "长安": "CA",
-  "阿凡达": "AFD",
   "长沙": "CS",
   "西藏": "XZ",
   "乐山": "LS",
@@ -115,12 +114,15 @@ const handler = async (req: Request): Promise<Response> => {
           // 零声母处理
           let initial = ZERO_INITIALS[py] || py.charAt(0);
           
-          // 翘舌音转换
-          if (py.startsWith('zh')) initial = 'z';
-          if (py.startsWith('ch')) initial = 'c';
-          if (py.startsWith('sh')) initial = 's';
+          // 确保首字母转换为大写
+          initial = initial.toUpperCase();
           
-          abbr += initial.toUpperCase();
+          // 翘舌音转换
+          if (py.startsWith('zh')) initial = 'Z';
+          if (py.startsWith('ch')) initial = 'C';
+          if (py.startsWith('sh')) initial = 'S';
+          
+          abbr += initial;
           pos++;
         }
       }
